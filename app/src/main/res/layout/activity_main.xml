@@ -14,6 +14,7 @@
         android:id="@+id/tituloProyecto"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
         android:gravity="center"
         android:shadowColor="@color/black"
         android:shadowDx="13"
@@ -25,8 +26,23 @@
         android:textSize="45sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <GridLayout
+        android:id="@+id/gridLayout"
+        android:layout_width="379dp"
+        android:layout_height="572dp"
+        android:columnCount="4"
+        android:paddingHorizontal="14dp"
+        android:paddingTop="200dp"
+        android:paddingBottom="20dp"
+        android:rowCount="4"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/tituloProyecto"
+        app:layout_constraintVertical_bias="0.368" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
