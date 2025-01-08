@@ -4,6 +4,7 @@ import Question
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.widget.Button
 import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.Toast
@@ -12,7 +13,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import com.example.casafantasmas.CustomDialogFragment
 import com.example.proyectocasafantasmas.databinding.ActivityMainBinding
-import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
     lateinit var mibinding: ActivityMainBinding
@@ -29,16 +29,22 @@ class MainActivity : AppCompatActivity() {
 
     // GENERAMOS POSICIONES ALEATORIAS
     var randomRowStart = (0..3).random()
-    var randomColumnStart=(0..3).random()
-    val randomRowFinish=(0..3).random()
-    val randomColumnFinish=(0..3).random()
+    var randomColumnStart = (0..3).random()
+    val randomRowFinish = (0..3).random()
+    val randomColumnFinish = (0..3).random()
 
     // VARIABLES PARA LA POSICION INICIAL DEL USUARIO Y DEL FINAL
-    var cardStartPosition:Int = 0
-    var cardFinishPosition:Int = 0
+    var cardStartPosition: Int = 0
+    var cardFinishPosition: Int = 0
+
+    // VARIABLES PARA POSICIONES DE FANTASMAS
+    val ghostPositions = mutableListOf<Int>() // LISTA PARA GUARDAR LAS POSICIONES DE LOS FANTASMAS
 
     // VARIABLE PARA GUARDAR POSICIONES ADYACENTES ANTIGUAS
-    lateinit var listaPosiciones:MutableList<Int>
+    lateinit var listaPosiciones: MutableList<Int>
+
+    // VARIABLE PARA CONTROLAR SI EL JUEGO HA TERMINADO
+    var gameFinished: Boolean = false // VARIABLE PARA EVITAR MAS MOVIMIENTOS AL GANAR
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,158 +53,216 @@ class MainActivity : AppCompatActivity() {
         initComponents()
         initGridLayout()
         assingCardsToArray()
-        displayMoves(randomRowStart,randomColumnStart)
+        placeGhosts() // COLOCAR FANTASMAS
+        displayMoves(randomRowStart, randomColumnStart)
     }
 
     private fun initComponents() {
-        mibinding =ActivityMainBinding.inflate(layoutInflater)
+        mibinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(mibinding.root)
         gridLayout = mibinding.gridLayout
-    } // METODO PAR INICIALIZAR COMPONENTES
+
+        // CONFIGURAR BOTON DE REINICIAR
+        mibinding.restartButton.setOnClickListener {
+            restartGame()
+        }
+    } // METODO PARA INICIALIZAR COMPONENTES
 
     private fun assingCardsToArray() {
-        for(row in 0 until 4) {
+        for (row in 0 until 4) {
             for (column in 0 until 4) {
-                val index = row * 4 + column // con row * 4 accedemos a la columna y al sumarle la columna, accedemos a la fila (un indice del
-                val cardView = gridLayout.getChildAt(index) as CardView // DECLARAR EL CARD ACCEDIENDO AL cardview DE ESA POSICION CON EL INDEX
-                board[row][column] = cardView // LA GUARDAMOS EN LA POSICION DEL ARRAY
-                Log.d("CardAssignment", "board[$row][$column] = $cardView") // Log para comprobación
-            } // BUCLE PARA RECORRER LAS COLUMNAS
-        } // BUCLE PARA RECORRER LAS FILAS
+                val index = row * 4 + column // CALCULA EL INDICE EN EL GRID
+                val cardView =
+                    gridLayout.getChildAt(index) as CardView // OBTIENE LA TARJETA EN ESA POSICION
+                board[row][column] = cardView // GUARDA LA TARJETA EN EL ARRAY
+                Log.d("CardAssignment", "board[$row][$column] = $cardView") // Log para comprobacion
+            }
+        }
     } // METODO PARA ASIGNAR LAS CARDS AL ARRAY
 
     private fun initGridLayout() {
         for (i in 1..16) {
-            // CREAMOS UNA cardView
-            cardView = LayoutInflater.from(this).inflate(R.layout.card, gridLayout, false) as CardView
+            // CREAMOS UNA CARDVIEW
+            cardView =
+                LayoutInflater.from(this).inflate(R.layout.card, gridLayout, false) as CardView
 
-            // CREAMOS EL imageView DE DENTRO DE LA TARJETA
+            // CREAMOS EL IMAGEVIEW DENTRO DE LA TARJETA
             imageView = cardView.findViewById(R.id.imageView)
 
-            // SETTEAMOS EL FONDO PREDETERMINADO DE LAS TARJETAS
+            // ESTABLECEMOS EL FONDO PREDETERMINADO DE LAS TARJETAS
             imageView.setImageResource(R.drawable.ic_launcher_background)
 
-            // AÑADIRMOS LA VISTA DE LA TARJETA AL gridLayout
+            // AÑADIMOS LA TARJETA AL GRIDLAYOUT
             gridLayout.addView(cardView)
-        } // BUCLE PARA RECORRER EL GRID
+        }
         initStartFinish()
-    } // INICIAR EL GridLayout
+    } // METODO PARA INICIAR EL GRIDLAYOUT
 
     private fun initStartFinish() {
-        // SI COINCIDEN EN EL MISMO SITIO O EN POSICIONES ADYACENTES VERTICAL Y HORIZONTAL, VOLVEMOS A GENERAR LAS POSICIONES
-        while (randomRowStart == randomRowFinish+1 || randomRowStart == randomRowFinish-1 ||
-            randomColumnStart == randomColumnFinish+1 || randomColumnStart == randomColumnFinish-1 ||
-            (randomRowStart == randomRowFinish && randomColumnStart == randomColumnFinish)) {
+        // ASEGURAMOS QUE LAS POSICIONES INICIAL Y FINAL NO SEAN ADYACENTES O IGUALES
+        while (randomRowStart == randomRowFinish + 1 || randomRowStart == randomRowFinish - 1 ||
+            randomColumnStart == randomColumnFinish + 1 || randomColumnStart == randomColumnFinish - 1 ||
+            (randomRowStart == randomRowFinish && randomColumnStart == randomColumnFinish)
+        ) {
             randomRowStart = (0..3).random()
             randomColumnStart = (0..3).random()
         }
-        // LO PASAMOS A INDICE PARA EL GridLayout
+        // CONVERTIMOS LAS POSICIONES EN INDICES DEL GRIDLAYOUT
         cardStartPosition = randomRowStart * 4 + randomColumnStart
         cardFinishPosition = randomRowFinish * 4 + randomColumnFinish
         println("cardStartPosition $cardStartPosition")
         updateUserPosition(cardStartPosition)
-    }  // METODO PARA DECLARAR LOS INDICES DE LA POSICION
+    }
 
+    private fun placeGhosts() {
+        // COLOCAR FANTASMAS EN POSICIONES ALEATORIAS
+        while (ghostPositions.size < 3) { // GENERAR 3 FANTASMAS
+            val randomPosition = (0 until 16).random()
+            if (randomPosition != cardStartPosition && randomPosition != cardFinishPosition && !ghostPositions.contains(
+                    randomPosition
+                )
+            ) {
+                ghostPositions.add(randomPosition)
+            }
+        }
+    } // METODO PARA COLOCAR LOS FANTASMAS
 
-    fun updateUserPosition(position:Int) {
-        //Con el indice generado, podemos acceder a la tarjeta de una posicion en el gridlayout
+    fun updateUserPosition(position: Int) {
+        // ACCEDEMOS A LA TARJETA EN LA POSICION ACTUAL
         cardUser = gridLayout.getChildAt(position) as CardView
 
-        //con la tarjeta ya podemos inicializar la imagen del usuario
+        // INICIALIZAMOS LA IMAGEN DEL USUARIO
         imageUser = cardUser.findViewById(R.id.imageView)
         imageUser.setImageResource(R.drawable.img_1)
 
-        //Hacemos lo mismo con otra posicion para el final
+        // CONFIGURAMOS LA TARJETA FINAL
         val cardFinish = gridLayout.getChildAt(cardFinishPosition) as CardView
         val imageFinish = cardFinish.findViewById<ImageView>(R.id.imageView)
-        imageFinish.setImageResource(R.drawable.candy)
+        imageFinish.setImageResource(R.drawable.img)
     }
 
+    fun displayMoves(row: Int, column: Int) {
+        // SI EL JUEGO YA TERMINO, EVITAR NUEVOS MOVIMIENTOS
+        if (gameFinished) return // EVITA QUE SE EJECUTE EL METODO SI EL JUEGO HA TERMINADO
 
-    fun displayMoves(row:Int,column:Int) {
-        //Con respecto a donde ha empezado el usuario, conseguimos las posiciones adyacentes
-        val bottomPosition:Int = (row+1) * 4  + column //Adyacente inferior
-        val topPosition:Int = (row-1) * 4 + column //Adyacente superior
-        val rightPosition:Int = row * 4  + (column+1) //Adyacente derecha
-        val leftPosition:Int = row * 4  + (column-1) //Adyacente izquierda
+        // CALCULAMOS LAS POSICIONES ADYACENTES
+        val bottomPosition: Int = (row + 1) * 4 + column
+        val topPosition: Int = (row - 1) * 4 + column
+        val rightPosition: Int = row * 4 + (column + 1)
+        val leftPosition: Int = row * 4 + (column - 1)
 
-        println("bottomPosition $bottomPosition")
-        println("topPosition $topPosition")
-        println("rightPosition $rightPosition")
-        println("leftPosition $leftPosition")
+        listaPosiciones = mutableListOf(bottomPosition, topPosition, rightPosition, leftPosition)
 
-        listaPosiciones = mutableListOf(bottomPosition,topPosition,rightPosition,leftPosition)
-        //Si la columna es 0, ignorar leftPosition
+        // SI LA COLUMNA ES 0, IGNORAMOS LEFTPOSITION
         if (column == 0) listaPosiciones.removeAt(3)
-        //Si la columna es 3, ignorar rightPosition
+        // SI LA COLUMNA ES 3, IGNORAMOS RIGHTPOSITION
         if (column == 3) listaPosiciones.removeAt(2)
-        // HAGO UN ITERATOR PARA PODER MODIFICAR UNA LISTA MIENTRAS LA RECORRO
+
         val iterator = listaPosiciones.iterator()
         while (iterator.hasNext()) {
             val move = iterator.next()
-            println("move $move")
-            var answer = ""
-            var question:Question<*>
-            if (move in 0..15) {//Si el movimiento es mayor a 0 y menor a 16
-                println("move filtrado $move")
+            if (move in 0..15) {
                 val card = gridLayout.getChildAt(move) as CardView
                 val image = card.findViewById<ImageView>(R.id.imageView)
                 image.setImageResource(R.drawable.img_2)
-                // ESTABLEZCO UN LISTENER PARA CUANDO HAGA CLICK A LAS TARJETAS DISPONIBLES PARA MOVERSE
-                image.setOnClickListener {
 
-                    // CONFIGURACION DEL DIALOG FRAGMENT
+                image.setOnClickListener {
+                    if (ghostPositions.contains(move)) {
+                        // SI EL USUARIO ENTRA EN UNA POSICION DE FANTASMA
+                        Toast.makeText(this, "Te atrapo un fantasma! Has perdido.", Toast.LENGTH_LONG).show()
+                        gameFinished = true // MARCAR EL JUEGO COMO TERMINADO
+                        resetAllCards() // DESACTIVAR TODOS LOS MOVIMIENTOS
+                        return@setOnClickListener
+                    }
+
                     val dialog = CustomDialogFragment()
                     val args = Bundle()
-                    question = Question.randomQuestion()
+
+                    val question: Question<*> = Question.randomQuestion()
                     args.putString("question_text", question.questionText)
                     dialog.arguments = args
 
-                    // LISTENER PARA EL RESULT DEL DIALOG FRAGMENT PASANDO PARAMETROS POR BUNDLE
-                    supportFragmentManager.setFragmentResultListener("dialog_result",this) {_, bundle ->
-                        answer = bundle.getString("answer", "")
+                    supportFragmentManager.setFragmentResultListener("dialog_result", this) { _, bundle ->
+                        val answer = bundle.getString("answer", "")
                         if (question.checkAnswer(answer)) {
-                            imageUser.setImageResource(R.drawable.img_3)
-                            // GUARDAMOS LA POSICION DEL USUARIO
-                            imageUser = image
-                            cardUser = card
-                            resetOldPositions()
-                            image.setImageResource(R.drawable.img_1)
-                            // VARIABLES PARA CONSEGUIR LA POSICION DE LA CARD CLICKEADA
-                            val newRow = move / 4
-                            val newColumn = move % 4
-                            println(listaPosiciones)
-                            // CON LA NUEVA POSICION, VOLVEMOS A ENTRAR EN ESTE METODO
-                            displayMoves(newRow,newColumn)
-                            //cambiar antiguas posiciones a fondo predeterminado
-                        } else  {
+                            if (move == cardFinishPosition) {
+                                Toast.makeText(this, "Felicidades, encontraste los dulces!", Toast.LENGTH_LONG).show()
+                                gameFinished = true // MARCAMOS EL JUEGO COMO TERMINADO
+                                resetAllCards() // DESACTIVAR TODOS LOS MOVIMIENTOS
+                            } else {
+                                imageUser.setImageResource(R.drawable.img_3)
+                                // GUARDAMOS LA POSICION DEL USUARIO
+                                imageUser = image
+                                cardUser = card
+                                resetOldPositions()
+                                image.setImageResource(R.drawable.img_1)
+                                // VARIABLES PARA CONSEGUIR LA POSICION DE LA CARD CLICKEADA
+                                val newRow = move / 4
+                                val newColumn = move % 4
+                                // CON LA NUEVA POSICION, VOLVEMOS A ENTRAR EN ESTE METODO
+                                displayMoves(newRow, newColumn)
+                            }
+                        } else {
                             Toast.makeText(this, "Respuesta incorrecta, prueba otra vez", Toast.LENGTH_SHORT).show()
                         }
                     }
-                    dialog.show(supportFragmentManager,"customDialog")
+                    dialog.show(supportFragmentManager, "customDialog")
                 }
             } else {
                 // ELIMINAMOS EL ELEMENTO, PARA QUE NO DE ERROR AL USAR EL METODO resetOldPositions
                 // POR INTENTAR ACCEDER A UN INDEX DEL LAYOUT QUE NO EXISTE
-                println("elemento eliminado $move")
                 iterator.remove()
             }
-
-
-            if (move == cardFinishPosition + 1) {
-                Toast.makeText(this,
-                    "¡Felicidades, encontraste los dulces!", Toast.LENGTH_LONG).show()
-                exitProcess(0) // SALIR DEL PROGRAMA
-            } // SI LA POSICION COINCIDE CON LA POSICION DE DONDE ESTA EL CARAMELO, SE CIERRA
         }
     }
-    fun resetOldPositions() { // PONEMOS LAS ANTIGUAS POSICIONES ADYACENTES A PREDETERMINADAS
+
+
+    fun restartGame() {
+        // Reiniciar variables del juego
+        gameFinished = false
+        randomRowStart = (0..3).random()
+        randomColumnStart = (0..3).random()
+        listaPosiciones.clear()
+        ghostPositions.clear()
+
+        // Limpiar las imágenes de todas las tarjetas
+        for (i in 0 until gridLayout.childCount) {
+            val card = gridLayout.getChildAt(i) as CardView
+            val image = card.findViewById<ImageView>(R.id.imageView)
+            image.setImageResource(R.drawable.ic_launcher_background)
+            image.setOnClickListener(null) // Eliminar listeners anteriores
+        }
+
+        // Generar nuevas posiciones de inicio y final
+        initStartFinish()
+
+        // Colocar nuevos fantasmas
+        placeGhosts()
+
+        // Mostrar movimientos iniciales
+        displayMoves(randomRowStart, randomColumnStart)
+
+        // Mostrar mensaje de reinicio
+        Toast.makeText(this, "Juego reiniciado!", Toast.LENGTH_SHORT).show()
+    } // METODO PARA REINICIAR EL JUEGO
+
+
+
+    fun resetOldPositions() {
         for (i in listaPosiciones) {
             val card = gridLayout.getChildAt(i) as CardView
             val image = card.findViewById<ImageView>(R.id.imageView)
             image.setImageResource(R.drawable.ic_launcher_background)
-            // DESACTIVAMOS LOS LISTENERS ANTIGUOS
             image.setOnClickListener(null)
         }
     }
+
+    fun resetAllCards() {
+        // RECORREMOS TODAS LAS TARJETAS Y DESACTIVAMOS LOS LISTENERS
+        for (i in 0 until gridLayout.childCount) {
+            val card = gridLayout.getChildAt(i) as CardView
+            val image = card.findViewById<ImageView>(R.id.imageView)
+            image.setOnClickListener(null)
+        }
+    } // MÉTODO PARA DESACTIVAR TODOS LOS MOVIMIENTOS AL TERMINAR EL JUEGO
 }
