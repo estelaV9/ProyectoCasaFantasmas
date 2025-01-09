@@ -30,8 +30,8 @@ class MainActivity : AppCompatActivity() {
     // GENERAMOS POSICIONES ALEATORIAS
     var randomRowStart = (0..3).random()
     var randomColumnStart = (0..3).random()
-    val randomRowFinish = (0..3).random()
-    val randomColumnFinish = (0..3).random()
+    var randomRowFinish = (0..3).random()
+    var randomColumnFinish = (0..3).random()
 
     // VARIABLES PARA LA POSICION INICIAL DEL USUARIO Y DEL FINAL
     var cardStartPosition: Int = 0
@@ -133,12 +133,12 @@ class MainActivity : AppCompatActivity() {
 
         // INICIALIZAMOS LA IMAGEN DEL USUARIO
         imageUser = cardUser.findViewById(R.id.imageView)
-        imageUser.setImageResource(R.drawable.img_1)
+        imageUser.setImageResource(R.drawable.user_img)
 
         // CONFIGURAMOS LA TARJETA FINAL
         val cardFinish = gridLayout.getChildAt(cardFinishPosition) as CardView
         val imageFinish = cardFinish.findViewById<ImageView>(R.id.imageView)
-        imageFinish.setImageResource(R.drawable.img)
+        imageFinish.setImageResource(R.drawable.candy)
     }
 
     fun displayMoves(row: Int, column: Int) {
@@ -164,16 +164,80 @@ class MainActivity : AppCompatActivity() {
             if (move in 0..15) {
                 val card = gridLayout.getChildAt(move) as CardView
                 val image = card.findViewById<ImageView>(R.id.imageView)
-                image.setImageResource(R.drawable.img_2)
+                image.setImageResource(R.drawable.question)
 
                 image.setOnClickListener {
                     if (ghostPositions.contains(move)) {
                         // SI EL USUARIO ENTRA EN UNA POSICION DE FANTASMA
-                        Toast.makeText(this, "Te atrapo un fantasma! Has perdido.", Toast.LENGTH_LONG).show()
-                        gameFinished = true // MARCAR EL JUEGO COMO TERMINADO
-                        resetAllCards() // DESACTIVAR TODOS LOS MOVIMIENTOS
-                        return@setOnClickListener
+                        Toast.makeText(
+                            this,
+                            "¡Has encontrado un fantasma! Responde dos preguntas para escapar.",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        var correctAnswers = 0 // Contador de respuestas correctas
+                        val totalQuestions = 2 // Numero total de preguntas a responder
+
+                        fun showQuestionDialog() {
+                            val dialog = CustomDialogFragment()
+                            val args = Bundle()
+
+                            val question: Question<*> = Question.randomQuestion()
+                            args.putString("question_text", question.questionText)
+                            dialog.arguments = args
+
+                            // Configurar listener para manejar la respuesta
+                            supportFragmentManager.setFragmentResultListener(
+                                "dialog_result",
+                                this
+                            ) { _, bundle ->
+                                val answer = bundle.getString("answer", "")
+                                if (question.checkAnswer(answer)) {
+                                    correctAnswers++
+                                    if (correctAnswers < totalQuestions) {
+                                        // Mostrar otra pregunta si aun no ha respondido las dos
+                                        Toast.makeText(
+                                            this,
+                                            "¡Respuesta correcta! Responde otra pregunta.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        showQuestionDialog()
+                                    } else {
+                                        // Si responde las dos preguntas correctamente, permite continuar
+                                        Toast.makeText(
+                                            this,
+                                            "¡Has escapado del fantasma!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        imageUser.setImageResource(R.drawable.user_img)
+                                        imageUser = image
+                                        cardUser = card
+                                        resetOldPositions()
+                                        image.setImageResource(R.drawable.user_img)
+
+                                        // Mover al jugador a la nueva posicion
+                                        val newRow = move / 4
+                                        val newColumn = move % 4
+                                        displayMoves(newRow, newColumn)
+                                    }
+                                } else {
+                                    // Si falla, cierra el dialogo y permanece en la misma posicion
+                                    Toast.makeText(
+                                        this,
+                                        "Respuesta incorrecta, el fantasma te atrapo. Te quedas en la misma posicion.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    correctAnswers =
+                                        0 // Reinicia el contador por si vuelve a caer en un fantasma
+                                    dialog.dismiss() // Cierra el dialogo
+                                }
+                            }
+                            dialog.show(supportFragmentManager, "CustomDialog")
+                        }
+
+                        showQuestionDialog() // Iniciar la primera pregunta
                     }
+
 
                     val dialog = CustomDialogFragment()
                     val args = Bundle()
@@ -182,7 +246,10 @@ class MainActivity : AppCompatActivity() {
                     args.putString("question_text", question.questionText)
                     dialog.arguments = args
 
-                    supportFragmentManager.setFragmentResultListener("dialog_result", this) { _, bundle ->
+                    supportFragmentManager.setFragmentResultListener(
+                        "dialog_result",
+                        this
+                    ) { _, bundle ->
                         val answer = bundle.getString("answer", "")
                         if (question.checkAnswer(answer)) {
                             if (move == cardFinishPosition) {
@@ -190,12 +257,12 @@ class MainActivity : AppCompatActivity() {
                                 gameFinished = true // MARCAMOS EL JUEGO COMO TERMINADO
                                 resetAllCards() // DESACTIVAR TODOS LOS MOVIMIENTOS
                             } else {
-                                imageUser.setImageResource(R.drawable.img_3)
+                                imageUser.setImageResource(R.drawable.user_img)
                                 // GUARDAMOS LA POSICION DEL USUARIO
                                 imageUser = image
                                 cardUser = card
                                 resetOldPositions()
-                                image.setImageResource(R.drawable.img_1)
+                                image.setImageResource(R.drawable.user_img)
                                 // VARIABLES PARA CONSEGUIR LA POSICION DE LA CARD CLICKEADA
                                 val newRow = move / 4
                                 val newColumn = move % 4
@@ -222,10 +289,13 @@ class MainActivity : AppCompatActivity() {
         gameFinished = false
         randomRowStart = (0..3).random()
         randomColumnStart = (0..3).random()
+        randomRowFinish = (0..3).random()  // Reiniciar posición de finalización
+        randomColumnFinish = (0..3).random()
+
         listaPosiciones.clear()
         ghostPositions.clear()
 
-        // Limpiar las imágenes de todas las tarjetas
+        // Limpiar las imagenes de todas las tarjetas
         for (i in 0 until gridLayout.childCount) {
             val card = gridLayout.getChildAt(i) as CardView
             val image = card.findViewById<ImageView>(R.id.imageView)
@@ -234,7 +304,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Generar nuevas posiciones de inicio y final
-        initStartFinish()
+        initStartFinish()  // Regeneramos las posiciones aleatorias de inicio y final
 
         // Colocar nuevos fantasmas
         placeGhosts()
@@ -244,8 +314,7 @@ class MainActivity : AppCompatActivity() {
 
         // Mostrar mensaje de reinicio
         Toast.makeText(this, "Juego reiniciado!", Toast.LENGTH_SHORT).show()
-    } // METODO PARA REINICIAR EL JUEGO
-
+    }
 
 
     fun resetOldPositions() {
@@ -264,5 +333,5 @@ class MainActivity : AppCompatActivity() {
             val image = card.findViewById<ImageView>(R.id.imageView)
             image.setOnClickListener(null)
         }
-    } // MÉTODO PARA DESACTIVAR TODOS LOS MOVIMIENTOS AL TERMINAR EL JUEGO
+    } // METODO PARA DESACTIVAR TODOS LOS MOVIMIENTOS AL TERMINAR EL JUEGO
 }
