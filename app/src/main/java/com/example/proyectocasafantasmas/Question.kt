@@ -16,21 +16,18 @@ class Question<T> {
 
     companion object {
         private val questions: List<Question<*>> = listOf(
-            Question("¿Cuánto es 2 + 2?", 4),
-            Question("¿Capital de Francia?", "Paris"),
-            Question("¿Es Kotlin un lenguaje de programación?", "si"),
-            Question("¿Cuántos días tiene un año bisiesto?", 366),
-            Question("¿Color del cielo?", "Azul"),
-            Question("¿Cuántos continentes hay en la Tierra?", 7),
-            Question("¿Cuál es el idioma oficial de Brasil?", "Portugues"),
-            Question("¿Cuántas patas tiene una araña?", 8),
-            Question("¿En qué año llegó el hombre a la Luna?", 1969),
-            Question("¿Qué gas respiramos principalmente los seres humanos?", "Oxigeno"),
-            Question("¿Cuál es el océano más grande del mundo?", "Pacifico"),
-            Question("¿Qué planeta es conocido como el planeta rojo?", "Marte"),
-            Question("¿Cuántos minutos tiene una hora?", 60),
-            Question("¿Qué instrumento mide la temperatura?", "Termometro"),
-            Question("¿Quién escribió *Don Quijote de la Mancha*?", "Miguel de Cervantes")
+            Question("Tengo agujas pero no coso. ¿Qué soy?", "Reloj"),
+            Question("Siempre corro pero no tengo pies. ¿Qué soy?", "Agua"),
+            Question("Cuanto más me quitas, más grande soy. ¿Qué soy?", "Agujero"),
+            Question("Si me nombras, desaparezco. ¿Qué soy?", "Silencio"),
+            Question("Tengo ciudades, pero no casas; montañas, pero no árboles. ¿Qué soy?", "Mapa"),
+            Question("Si tienes 2 peces y 1 se ahoga, ¿cuántos te quedan?", "Dos"),
+            Question("¿Qué animal salta más alto que una casa?", "Todos"),
+            Question("¿Qué animal lleva en su nombre una fruta?", "Mono"),
+            Question("Siempre subo pero nunca bajo. ¿Qué soy?", "Edad"),
+            Question("¿Qué cosa puedes romper sin tocarla?", "Promesa"),
+            Question("Si dos son compañía y tres son multitud, ¿qué son cuatro y cinco?", "Nueve"),
+            Question("Lana sube y lana baja. ¿De qué se trata?", "Navaja")
         )
 
         fun randomQuestion(): Question<*> {
